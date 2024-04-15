@@ -53,7 +53,7 @@
               <van-stepper disable-input :min="0" :max="255" v-model="config.backSpeed" step="5" />
             </div>
           </div>
-          <div class="road">
+          <div class="road" style="visibility: hidden">
             <div class="car">
               <div class="wheel" style="top: 0; left: 0" :style="{ transform: `rotate(${wheelDeg}deg)` }"></div>
               <div class="line" style="top: 15px; left: 12px; right: 12px"></div>
@@ -75,14 +75,10 @@
                 disable-input
                 :min="1"
                 :max="30"
-                v-model="config.trunStep"
-                @change="trunStepChange"
+                v-model="config.trunSpeed"
+                @change="trunSpeedChange"
                 step="1"
               />
-            </div>
-            <div class="flex flex-row items-center mb-12">
-              <p class="font-14-500 c-666 mr-12 labelW">转向范围:</p>
-              <van-stepper disable-input :min="30" :max="120" v-model="config.trunRange" step="10" />
             </div>
           </div>
         </div>
@@ -140,11 +136,11 @@
           </div>
 
           <div class="flex flex-row justify-center">
-            <Btn :default-pos="90" @onChange="anglesChange" :step="config.trunStep" :min="90" :max="turnMax">
+            <Btn :default-pos="0" @onChange="anglesChange" :step="1" :min="-1" :max="1">
               <span class="font-16-500 c-333">左</span>
             </Btn>
             <div class="w-20"></div>
-            <Btn :default-pos="90" @onChange="anglesChange" :step="-config.trunStep" :min="turnMin" :max="90">
+            <Btn :default-pos="0" @onChange="anglesChange" :step="-1" :min="-1" :max="1">
               <span class="font-16-500 c-333">右</span>
             </Btn>
           </div>
@@ -180,60 +176,12 @@
         </div>
         <div class="flex-1">
           <div class="flex flex-row items-center mb-12">
-            <p class="font-14-500 c-666 mr-12 labelW">中位duty:</p>
-            <van-stepper
-              disable-input
-              :min="0"
-              :max="100"
-              v-model="config.motorEscMiddle"
-              @change="setMotorEscMiddle"
-              step="1"
-            />
-          </div>
-          <div class="flex flex-row items-center mb-12">
-            <p class="font-14-500 c-666 mr-12 labelW">前进duty:</p>
-            <van-stepper
-              disable-input
-              :min="0"
-              :max="100"
-              @change="setMotorEscForWardMin"
-              v-model="config.motorEscForWardMin"
-              class="mr-8"
-              step="1"
-            />
-            <van-stepper
-              disable-input
-              :min="0"
-              :max="100"
-              @change="setMotorEscForWardMax"
-              v-model="config.motorEscForWardMax"
-              step="1"
-            />
-          </div>
-          <div class="flex flex-row items-center mb-12">
-            <p class="font-14-500 c-666 mr-12 labelW">后退duty:</p>
-            <van-stepper
-              disable-input
-              :min="0"
-              :max="100"
-              @change="setMotorEscBackWardMin"
-              v-model="config.motorEscBackWardMin"
-              class="mr-8"
-              step="1"
-            />
-            <van-stepper
-              disable-input
-              :min="0"
-              :max="100"
-              @change="setMotorEscBackWardMax"
-              v-model="config.motorEscBackWardMax"
-              step="1"
-            />
-          </div>
-          <div class="flex flex-row items-center mb-12">
             <van-button icon="revoke" plain type="warning" class="w-90" @click="resetDefault">
               <span>恢复默认值</span>
             </van-button>
+          </div>
+          <div class="flex flex-row items-center mb-12">
+            <van-field v-model="ip" @input="ipChange" label="IP" placeholder="请输入IP" />
           </div>
         </div>
       </div>
@@ -256,14 +204,15 @@ export default {
       durationEn: false,
       ip: '192.168.181.7',
       checked: false,
-      angles: 90,
+      angles: 0,
+      lastAngles: 0,
       config: {
         trunRange: 60,
         forwardSpeed: 10,
         keepForwardSpeed: false,
         keepBackSpeed: false,
         backSpeed: 10,
-        trunStep: 1,
+        trunSpeed: 1,
         forwardAcceleration: 1,
         backwardAcceleration: 0,
         motorEscMiddle: 75,
@@ -356,7 +305,7 @@ export default {
         keepForwardSpeed: false,
         keepBackSpeed: false,
         backSpeed: 10,
-        trunStep: 1,
+        trunSpeed: 1,
         forwardAcceleration: 1,
         backwardAcceleration: 0,
         motorEscMiddle: 75,
@@ -371,11 +320,11 @@ export default {
       };
       this.onOpen();
     },
+    ipChange() {
+      this.initWebSocket();
+    },
     anglesChange(data) {
-      let val = data.val;
-      if (val) {
-        this.angles = val;
-      }
+      this.angles = data.val;
     },
     runningChange(data) {
       let val = data.val;
@@ -410,9 +359,13 @@ export default {
     },
     runningSend(speed) {
       if (speed) {
-        this.sendMsg(this.gear, speed);
+        if (this.angles === 0) {
+          this.sendMsg(this.gear, speed);
+        }
       } else {
-        this.sendMsg('STOP', 0);
+        if (!this.angles) {
+          this.sendMsg('STOP', 0);
+        }
       }
     },
     anglesSend(val) {
@@ -423,32 +376,8 @@ export default {
     },
     animation() {
       if (this.wsState === 2) {
-        if (this.preRunning !== this.running) {
-          this.runningSend(this.running);
-          this.preRunning = this.running;
-          let cssSpeed = parseInt((3 - (this.running / 255) * 3).toFixed(2));
-          if (cssSpeed <= 0.2) {
-            cssSpeed = 0.2;
-          }
-          if (this.running === 0) {
-            cssSpeed = 0;
-          }
-
-          document.getElementById('primary').style.animationDuration = `${cssSpeed}s`;
-          document.getElementById('secondary').style.animationDuration = `${cssSpeed}s`;
-        }
-        if (this.preAngles !== this.angles) {
-          this.anglesSend(this.angles);
-          this.wheelDeg = 0;
-          let diff = Math.abs(this.angles - 90);
-          if (this.angles > 90) {
-            this.wheelDeg = -diff;
-          }
-          if (this.angles < 90) {
-            this.wheelDeg = diff;
-          }
-          this.preAngles = this.angles;
-        }
+        this.anglesSend(this.angles);
+        this.runningSend(this.running);
       }
       window.requestAnimationFrame(this.animation);
     },
@@ -461,8 +390,8 @@ export default {
       this.reset();
       this.sendMsg('OFF');
     },
-    trunStepChange() {
-      this.sendMsg('SET_SERVO_STEP', this.config.trunStep);
+    trunSpeedChange() {
+      this.sendMsg('SET_TURN', this.config.trunSpeed);
     },
     toggleGear() {
       this.gear = this.gear === 'FORWARD' ? 'BACKWARD' : 'FORWARD';
@@ -477,28 +406,8 @@ export default {
       this.websocket.onclose = this.onClose;
       this.websocket.onmessage = this.onMessage;
     },
-    setMotorEscMiddle(val) {
-      this.sendMsg('SET_MOTOR_MIDDLE', this.config.motorEscMiddle);
-    },
-    setMotorEscForWardMin() {
-      this.sendMsg('SET_MOTOR_FORWARD', -this.config.motorEscForWardMin);
-    },
-    setMotorEscForWardMax() {
-      this.sendMsg('SET_MOTOR_FORWARD', this.config.motorEscForWardMax);
-    },
-    setMotorEscBackWardMin() {
-      this.sendMsg('SET_MOTOR_BACKWARD', -this.config.motorEscBackWardMin);
-    },
-    setMotorEscBackWardMax() {
-      this.sendMsg('SET_MOTOR_BACKWARD', this.config.motorEscBackWardMax);
-    },
     onOpen() {
-      this.trunStepChange();
-      this.setMotorEscMiddle();
-      this.setMotorEscForWardMin();
-      this.setMotorEscForWardMax();
-      this.setMotorEscBackWardMin();
-      this.setMotorEscBackWardMax();
+      this.trunSpeedChange();
       this.durationEn = true;
       this.wsState = 2;
       this.start();
@@ -511,31 +420,20 @@ export default {
         console.log('cmd is emtry');
         return;
       }
-      if (cmd === 'BACKWARD') {
-        val = 255 - val;
-        console.log(
-          val,
-          this.map_range(
-            val,
-            0,
-            255,
-            4096 * (this.config.motorEscBackWardMin / 100),
-            4096 * (this.config.motorEscBackWardMax / 100)
-          )
-        );
-      }
       let data = {
         COMMOND: cmd,
         VALUE: val,
       };
+
       this.currentCmd = `${cmd}: ${val || '-'}`;
+      console.log(this.currentCmd);
       try {
         this.websocket.send(JSON.stringify(data));
       } catch (error) {}
     },
     reset() {
       this.running = 0;
-      this.angles = 90;
+      this.angles = 0;
       this.fixedSpeed = false;
     },
     onClose() {
