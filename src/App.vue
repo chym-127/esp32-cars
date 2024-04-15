@@ -426,7 +426,6 @@ export default {
       };
 
       this.currentCmd = `${cmd}: ${val || '-'}`;
-      console.log(this.currentCmd);
       try {
         this.websocket.send(JSON.stringify(data));
       } catch (error) {}

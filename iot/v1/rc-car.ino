@@ -144,10 +144,12 @@ void onCommond(JsonDocument obj) {
         return;
       motorStop();
       if (val > 0) {  // 右转
+        motors.setSpeedB(0);
         motors.setSpeedA(turnSpeed);
         motors.forwardA();
       } else {
-        motors.setSpeedA(turnSpeed);
+        motors.setSpeedA(0);
+        motors.setSpeedB(turnSpeed);
         motors.forwardB();
       }
       break;
