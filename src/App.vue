@@ -71,38 +71,20 @@
           <div class="flex-1 py-32 pl-24">
             <div class="flex flex-row items-center mb-12">
               <p class="font-14-500 c-666 mr-12 labelW">转向速度:</p>
-              <van-stepper
-                disable-input
-                :min="1"
-                :max="30"
-                v-model="config.trunSpeed"
-                @change="trunSpeedChange"
-                step="1"
-              />
+              <van-stepper disable-input :min="30" :max="255" v-model="config.trunSpeed" @change="trunSpeedChange"
+                step="1" />
             </div>
           </div>
         </div>
         <div class="flex flex-row justify-between items-center" style="height: max-content">
           <div class="flex flex-row justify-center">
-            <Btn
-              :default-pos="offset"
-              :acceleration="config.forwardAcceleration"
-              @onChange="runningChange"
-              :min="config.forwardMinSpeed"
-              :max="config.forwardMaxSpeed"
-              :step="1"
-            >
+            <Btn :default-pos="offset" :acceleration="config.forwardAcceleration" @onChange="runningChange"
+              :min="config.forwardMinSpeed" :max="config.forwardMaxSpeed" :step="1">
               <span class="font-16-500 c-333">前进</span>
             </Btn>
             <div class="w-20"></div>
-            <Btn
-              :default-pos="offset"
-              :acceleration="config.backwardAcceleration"
-              @onChange="backChange"
-              :min="config.backwardMinSpeed"
-              :max="config.backwardMaxSpeed"
-              :step="1"
-            >
+            <Btn :default-pos="offset" :acceleration="config.backwardAcceleration" @onChange="backChange"
+              :min="config.backwardMinSpeed" :max="config.backwardMaxSpeed" :step="1">
               <span class="font-16-500 c-333">倒车</span>
             </Btn>
           </div>
@@ -112,25 +94,13 @@
               <span>设置</span>
             </van-button>
             <div class="w-20"></div>
-            <van-button
-              icon="pause-circle-o"
-              :disabled="wsState != 2 || state == 2"
-              plain
-              type="danger"
-              class="w-90"
-              @click="stop"
-            >
+            <van-button icon="pause-circle-o" :disabled="wsState != 2 || state == 2" plain type="danger" class="w-90"
+              @click="stop">
               <span>停止</span>
             </van-button>
             <div class="w-20"></div>
-            <van-button
-              icon="replay"
-              :disabled="wsState != 2 || state == 1"
-              plain
-              type="primary"
-              class="w-90"
-              @click="start"
-            >
+            <van-button icon="replay" :disabled="wsState != 2 || state == 1" plain type="primary" class="w-90"
+              @click="start">
               <span>启动</span>
             </van-button>
           </div>
@@ -148,22 +118,19 @@
       </div>
     </div>
 
-    <van-popup
-      v-model:show="showConfig"
-      position="left"
-      :style="{ width: '70dvw', height: '100dvh', overflow: 'hidden' }"
-    >
+    <van-popup v-model:show="showConfig" position="left"
+      :style="{ width: '70dvw', height: '100dvh', overflow: 'hidden' }">
       <div class="config-box flex flex-row px-24 py-12">
         <div class="flex-1">
           <div class="flex flex-row items-center mb-12">
             <p class="font-14-500 c-666 mr-12 labelW">前进速度区间:</p>
-            <van-stepper disable-input :min="0" :max="255" v-model="config.forwardMinSpeed" class="mr-8" step="1" />
-            <van-stepper disable-input :min="0" :max="255" v-model="config.forwardMaxSpeed" step="1" />
+            <van-stepper disable-input :min="100" :max="255" v-model="config.forwardMinSpeed" class="mr-8" step="1" />
+            <van-stepper disable-input :min="100" :max="255" v-model="config.forwardMaxSpeed" step="1" />
           </div>
           <div class="flex flex-row items-center mb-12">
             <p class="font-14-500 c-666 mr-12 labelW">后退速度区间:</p>
-            <van-stepper disable-input :min="0" :max="255" v-model="config.backwardMinSpeed" class="mr-8" step="1" />
-            <van-stepper disable-input :min="0" :max="255" v-model="config.backwardMaxSpeed" step="1" />
+            <van-stepper disable-input :min="100" :max="255" v-model="config.backwardMinSpeed" class="mr-8" step="1" />
+            <van-stepper disable-input :min="100" :max="255" v-model="config.backwardMaxSpeed" step="1" />
           </div>
           <div class="flex flex-row items-center mb-12">
             <p class="font-14-500 c-666 mr-12 labelW">前进加速度:</p>
@@ -202,7 +169,8 @@ export default {
       duration: 0,
       showConfig: false,
       durationEn: false,
-      ip: '192.168.181.7',
+      ip: '192.168.208.169',
+      lastCmd: '',
       checked: false,
       angles: 0,
       lastAngles: 0,
@@ -213,16 +181,16 @@ export default {
         keepBackSpeed: false,
         backSpeed: 10,
         trunSpeed: 1,
-        forwardAcceleration: 1,
-        backwardAcceleration: 0,
+        forwardAcceleration: 5,
+        backwardAcceleration: 5,
         motorEscMiddle: 75,
         motorEscForWardMin: 76,
         motorEscForWardMax: 99,
         motorEscBackWardMin: 25,
         motorEscBackWardMax: 73,
-        forwardMinSpeed: 0,
+        forwardMinSpeed: 100,
         forwardMaxSpeed: 255,
-        backwardMinSpeed: 0,
+        backwardMinSpeed: 100,
         backwardMaxSpeed: 255,
       },
       currentCmd: '',
@@ -280,7 +248,6 @@ export default {
       Object.assign(this.config, configStore);
     }
     //ceshi
-    this.onOpen();
     this.initWebSocket();
 
     setInterval(() => {
@@ -305,7 +272,7 @@ export default {
         keepForwardSpeed: false,
         keepBackSpeed: false,
         backSpeed: 10,
-        trunSpeed: 1,
+        trunSpeed: 30,
         forwardAcceleration: 1,
         backwardAcceleration: 0,
         motorEscMiddle: 75,
@@ -424,11 +391,14 @@ export default {
         COMMOND: cmd,
         VALUE: val,
       };
-
+      if (this.lastCmd === 'STOP' && cmd === 'STOP') {
+        return
+      }
+      this.lastCmd = cmd
       this.currentCmd = `${cmd}: ${val || '-'}`;
       try {
         this.websocket.send(JSON.stringify(data));
-      } catch (error) {}
+      } catch (error) { }
     },
     reset() {
       this.running = 0;
@@ -454,6 +424,7 @@ export default {
 div {
   line-height: 18px;
 }
+
 .w-center-box {
   border: 1px solid;
   width: 100dvh;
@@ -564,16 +535,14 @@ div {
   left: 50%;
   /* top: 0%; */
   transform: translateX(-50%);
-  background: linear-gradient(
-    to bottom,
-    #fff 8.33%,
-    #e0e0e0 8.33% 24.99%,
-    #fff 24.99% 41.66%,
-    #e0e0e0 41.66% 58.32%,
-    #fff 58.32% 74.98%,
-    #e0e0e0 74.98% 91.64%,
-    #fff 91.64%
-  );
+  background: linear-gradient(to bottom,
+      #fff 8.33%,
+      #e0e0e0 8.33% 24.99%,
+      #fff 24.99% 41.66%,
+      #e0e0e0 41.66% 58.32%,
+      #fff 58.32% 74.98%,
+      #e0e0e0 74.98% 91.64%,
+      #fff 91.64%);
 }
 
 .labelW {

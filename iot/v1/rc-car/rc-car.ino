@@ -11,12 +11,12 @@
 
 #define LED 2
 
-const unsigned int EN_A = 3;
-const unsigned int IN1_A = 5;
-const unsigned int IN2_A = 6;
-const unsigned int IN1_B = 7;
-const unsigned int IN2_B = 8;
-const unsigned int EN_B = 9;
+const unsigned int EN_A = 13;
+const unsigned int IN1_A = 12;
+const unsigned int IN2_A = 14;
+const unsigned int IN1_B = 25;
+const unsigned int IN2_B = 26;
+const unsigned int EN_B = 27;
 
 L298NX2 motors(EN_A, IN1_A, IN2_A, EN_B, IN1_B, IN2_B);
 
@@ -100,6 +100,7 @@ void motorStop() {
 void motorForward(int val) {
   if (current == OFF_STATE)
     return;
+  motors.setSpeed(val);
   motors.forward();
 }
 
@@ -107,6 +108,7 @@ void motorForward(int val) {
 void motorBackward(int val) {
   if (current == OFF_STATE)
     return;
+  motors.setSpeed(val);
   motors.backward();
 }
 
@@ -143,7 +145,7 @@ void onCommond(JsonDocument obj) {
       if (current == OFF_STATE)
         return;
       motorStop();
-      if (val > 0) {  // 右转
+      if (val < 0) {  // 右转
         motors.setSpeedB(0);
         motors.setSpeedA(turnSpeed);
         motors.forwardA();
